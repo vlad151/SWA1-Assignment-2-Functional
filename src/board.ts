@@ -15,7 +15,7 @@ export type Board<T> = {
     width: number,
     height: number,
     generator: Generator<T>,
-    positions: Position[][],
+  
 };
 
 export type Effect<T> = {
@@ -31,18 +31,26 @@ export type MoveResult<T> = {
 }    
 
 export function create<T>(generator: Generator<T>, width: number, height: number): Board<T> {        
-let positions: Position[][] =new Array(height).fill(new Array(width).fill({row: 0, col: 0}))
+// let positions: Position[][] =new Array(height).fill(new Array(width).fill({row: 0, col: 0}))
 
     for (let row = 0; row < height; row++) {
          for (let col = 0; col < width; col++) {
-            positions[row][col] = {row: row, col: col}
+            // positions[row][col] = generator.next()
+
          }
         }
-    return {width: width, height: height, generator: generator, positions:positions}
+    return {width: width, height: height, generator: generator}
 }    
 
-export function positions(board: Board<String>): Position[][] {
-    return board.positions
+export function positions(board: Board<String>): Position[] {
+    let positions:Position[]=[]
+    for (let row = 0; row < board.height; row++) {
+         for (let col = 0; col < board.width; col++) {
+        positions.push({row: row, col: col})
+
+         }
+        }
+        return positions
 }
 
 export function piece<T>(board: Board<T>, p: Position): T | undefined {
