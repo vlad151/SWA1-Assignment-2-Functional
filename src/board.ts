@@ -45,3 +45,7 @@ export function canMove<T>(board: Board<T>, first: Position, second: Position): 
 export function move<T>(generator: Generator<T>, board: Board<T>, first: Position, second: Position): MoveResult<T> {
     return
 }
+export function positions(board: Board<String>): Position[] {
+    return
+}
+
