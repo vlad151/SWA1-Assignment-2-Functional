@@ -178,7 +178,7 @@ describe("Board", () => {
             it("moves the pieces during a move", () => {
                 generator.prepare('C', 'D', 'A')
                 generator.prepare('X', 'Y', 'Z')
-                console.table(board.tiles)
+                generator.prepare('M', 'P', 'O')
                 board = Board.move(generator, board, {row: 2, col: 1}, {row: 0, col: 1}).board
                 expect(Board.piece(board, {row: 2, col: 1})).toEqual('B')
             })
@@ -206,7 +206,9 @@ describe("Board", () => {
                 generator.prepare('G', 'H', 'I')
                 generator.prepare('J', 'K', 'L')
                 generator.prepare('J', 'K', 'L')
+                console.table(board.tiles)
                 const moved = Board.move(generator, board, {row: 3, col: 4}, {row: 3, col: 0})
+                console.table(board.tiles)
                 expect(moved.effects).toContainEqual(
                     {kind: 'Match', match: {matched: 'D', positions: [{row: 3, col: 0}, {row: 3, col: 1}, {row: 3, col: 2}]}}
                 )

@@ -68,32 +68,38 @@ export function canMove<T>(board: Board<T>, first: Position, second: Position): 
 }
 
 export function move<T>(generator: Generator<T>, board: Board<T>, first: Position, second: Position): MoveResult<T> {
-  // Swap the tiles
-  const swappedBoard = swapTiles(board, first, second);
+  if (!canMove(board, first, second)) {
+      return { board, effects: [] };
+  }
+  let currentBoard = swapTiles(board, first, second);
+  let effects: Effect<T>[] = [];
+  let matches: Position[] = [];
 
-  // Check for matches on the entire board
-  const allPositions = positions(swappedBoard);
-  const allMatches: Match<T>[] = [];
-  allPositions.forEach(pos => {
-      const match = checkForMatch(pos, swappedBoard.tiles);
-      if (match.length >= 3) {
-          const matchedTile = swappedBoard.tiles[pos.row][pos.col];
-          allMatches.push({ matched: matchedTile, positions: match });
+  do {
+      matches = positions(currentBoard)
+          .map(pos => checkForMatch(pos, currentBoard.tiles))
+          .flat()
+          .filter((value, index, self) => 
+              self.findIndex(v => v.row === value.row && v.col === value.col) === index
+          );
+
+      if (matches.length > 0) {
+          // Add Match effect
+          const matchedTile = piece(currentBoard, matches[0]);
+          if (matchedTile !== undefined) {
+              effects.push({ kind: "Match", match: { matched: matchedTile, positions: matches } });
+          }
+
+          // Remove matched tiles and refill the board
+          currentBoard = refillBoard(generator, currentBoard, matches);
+          effects.push({ kind: "Refill" });
       }
-  });
+  } while (matches.length > 0);
 
-  // Handle matches (this is a simple version, you might want to expand on this)
-  let updatedBoard = { ...swappedBoard };
-  allMatches.forEach(match => {
-      match.positions.forEach(pos => {
-          updatedBoard.tiles[pos.row][pos.col] = generator.next();
-      });
-  });
-
-  // Create effects based on matches
-  const effects: Effect<T>[] = allMatches.map(match => ({ kind: "Match", match }));
-
-  return { board: updatedBoard, effects };
+  return {
+      board: currentBoard,
+      effects: effects
+  };
 }
 
 export function positions<T>(board: Board<T>): Position[] {
@@ -176,3 +182,14 @@ function swapTiles<T>(board: Board<T>, first: Position, second: Position): Board
     );
     return { ...board, tiles: newTiles };
   }
+
+  function refillBoard<T>(generator: Generator<T>, board: Board<T>, matches: Position[]): Board<T> {
+    const newTiles = board.tiles.map(row => [...row]);
+    for (const match of matches) {
+        for (let row = match.row; row > 0; row--) {
+            newTiles[row][match.col] = newTiles[row - 1][match.col];
+        }
+        newTiles[0][match.col] = generator.next();
+    }
+    return { ...board, tiles: newTiles };
+}
