@@ -177,6 +177,8 @@ describe("Board", () => {
 
             it("moves the pieces during a move", () => {
                 generator.prepare('C', 'D', 'A')
+                generator.prepare('X', 'Y', 'Z')
+                console.table(board.tiles)
                 board = Board.move(generator, board, {row: 2, col: 1}, {row: 0, col: 1}).board
                 expect(Board.piece(board, {row: 2, col: 1})).toEqual('B')
             })
