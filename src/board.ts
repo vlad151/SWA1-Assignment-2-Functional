@@ -70,7 +70,10 @@ export function canMove<T>(board: Board<T>, first: Position, second: Position): 
 }
 
 export function move<T>(generator: Generator<T>, board: Board<T>, first: Position, second: Position): MoveResult<T> {
-return 
+  if (!canMove(board, first, second)) return { board, effects: [] };
+
+  const newBoard = swapTiles(board, first, second);
+  return handleMatches(newBoard, generator);
 }
 
 
@@ -117,21 +120,77 @@ if (!tile) return matches;
 return matches;
 }
 
-function isSamePostion(first: Position, second: Position): boolean {
-  return
+function isSamePostion(first:  Position[], second:  Position[]): boolean {
+ if (first.length !== second.length) return false;
+ for (let i = 0; i < first.length; i++) {
+   if (first[i].row !== second[i].row || first[i].col !== second[i].col) return false;
+ }
+  return true;
 }
 
-function handleMatches<T>(board: Board<T>, matches: Match<T>[]): MoveResult<T> {
-  return
+function handleMatches<T>(board: Board<T>, generator: Generator<T>): MoveResult<T> {
+  const matches = detectMatch(board);
+  if (matches.length === 0) {
+    return { board, effects: [] };
+  }
+
+  // Process the matches
+  board = processMatches(matches, board);
+  
+  // Add Match effects
+  const matchEffects: Effect<T>[] = matches.map(match => ({ kind: 'Match', match }));
+
+  // Refill the board
+  board = refillBoard(board, generator);
+
+  // Add Refill effect
+  const refillEffect: Effect<T> = { kind: 'Refill' };
+
+  // Recursive call to handle any new matches after refilling
+  const nextMoveResult = handleMatches(board, generator);
+
+  return {
+    board: nextMoveResult.board,
+    effects: [...matchEffects, refillEffect, ...nextMoveResult.effects]
+  };
 }
 
-function processMatches<T>(board: Board<T>): MoveResult<T> {
-  return
+function processMatches<T>(matches: Match<T>[],board: Board<T>): Board<T> {
+  matches.forEach((match) => {
+    match.positions.forEach((position) => {
+      board.tiles[position.row][position.col] = undefined;
+    });
+  });
+  return board;
 }
 
-function processRefill<T>(board: Board<T>): MoveResult<T> {
-  return
+function refillBoard<T>(board: Board<T>, generator: Generator<T>): Board<T> {
+  // 3. Drop tiles from above
+  for (let col = 0; col < board.width; col++) {
+    let emptyRow = board.height - 1;
+    for (let row = board.height - 1; row >= 0; row--) {
+      if (!board.tiles[row] || board.tiles[row][col] === undefined) {
+        continue;
+      }
+      if (row !== emptyRow) {
+        board.tiles[emptyRow][col] = board.tiles[row][col];
+        board.tiles[row][col] = undefined;
+      }
+      emptyRow--;
+    } 
+  }
+
+  // 4. Generate new tiles
+  for (let row = 0; row < board.height; row++) {
+    for (let col = 0; col < board.width; col++) {
+      if (!board.tiles[row] || board.tiles[row][col] === undefined) {
+        board.tiles[row][col] = generator.next();
+      }
+    }
+  }
+  return board;
 }
+
 
 function isValidPosition<T>(board: Board<T>, position: Position): boolean {
   return (
@@ -142,9 +201,26 @@ function isValidPosition<T>(board: Board<T>, position: Position): boolean {
   );
 }
 
-function detectMatch<T>(board: Board<T>): MoveResult<T> {
-  return
+function detectMatch<T>(board: Board<T>): Match<T>[] 
+{
+  const matches: Match<T>[] = [];
+  const allPositions = positions(board);
+
+  allPositions.forEach((position) => {
+    const matchedPositions = checkForMatch(position, board.tiles);
+    if (matchedPositions.length) {
+      const tile = board.tiles[position.row][position.col];
+      if (tile) {
+        const existingMatch = matches.find(m => m.matched === tile && isSamePostion(m.positions, matchedPositions));
+        if (!existingMatch) {
+          matches.push({ matched: tile, positions: matchedPositions });
+        }
+      }
+    }
+  });
+return matches;
 }
+
 
 function areInSameRowOrColumn(pos1: Position, pos2: Position): boolean {
   return pos1.row === pos2.row || pos1.col === pos2.col;
