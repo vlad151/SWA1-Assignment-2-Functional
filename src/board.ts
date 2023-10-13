@@ -69,37 +69,49 @@ export function canMove<T>(board: Board<T>, first: Position, second: Position): 
 
 export function move<T>(generator: Generator<T>, board: Board<T>, first: Position, second: Position): MoveResult<T> {
   if (!canMove(board, first, second)) {
-      return { board, effects: [] };
-  }
-  let currentBoard = swapTiles(board, first, second);
-  let effects: Effect<T>[] = [];
-  let matches: Position[] = [];
+    return { board, effects: [] };
+}
+let currentBoard = swapTiles(board, first, second);
+let effects: Effect<T>[] = [];
+let matches: Position[] = [];
 
-  do {
-      matches = positions(currentBoard)
-          .map(pos => checkForMatch(pos, currentBoard.tiles))
-          .flat()
-          .filter((value, index, self) => 
-              self.findIndex(v => v.row === value.row && v.col === value.col) === index
-          );
+do {
+    matches = positions(currentBoard)
+        .map(pos => checkForMatch(pos, currentBoard.tiles))
+        .flat()
+        .filter((value, index, self) => 
+            self.findIndex(v => v.row === value.row && v.col === value.col) === index
+        );
 
-      if (matches.length > 0) {
-          // Add Match effect
-          const matchedTile = piece(currentBoard, matches[0]);
-          if (matchedTile !== undefined) {
-              effects.push({ kind: "Match", match: { matched: matchedTile, positions: matches } });
-          }
+    if (matches.length > 0) {
+        // Group matches by tile type
+        const groupedMatches: Record<string, Position[]> = {};
+        for (const match of matches) {
+            const tile = currentBoard.tiles[match.row][match.col];
+            if (tile) {
+                const key = tile as unknown as string; // Type assertion
+                if (!groupedMatches[key]) {
+                    groupedMatches[key] = [];
+                }
+                groupedMatches[key].push(match);
+            }
+        }
 
-          // Remove matched tiles and refill the board
-          currentBoard = refillBoard(generator, currentBoard, matches);
-          effects.push({ kind: "Refill" });
-      }
-  } while (matches.length > 0);
+        // Add Match effect for each group
+        for (const tile in groupedMatches) {
+            effects.push({ kind: "Match", match: { matched: tile as unknown as T, positions: groupedMatches[tile] } });
+        }
 
-  return {
-      board: currentBoard,
-      effects: effects
-  };
+        // Remove matched tiles and refill the board
+        currentBoard = refillBoard(generator, currentBoard, matches);
+        effects.push({ kind: "Refill" });
+    }
+} while (matches.length > 0);
+
+return {
+    board: currentBoard,
+    effects: effects
+};
 }
 
 export function positions<T>(board: Board<T>): Position[] {
@@ -126,46 +138,57 @@ function isPositionWithinBoard<T>(pos: Position, board: Board<T>): boolean {
 }
 
 function checkForMatch<T>(position: Position, board: T[][]): Position[] {
-    const tile = board[position.row][position.col];
-    const matchedPositions: Position[] = [];
+  const tile = board[position.row][position.col];
+  const horizontalMatches: Position[] = [];
+  const verticalMatches: Position[] = [];
 
-    if (!tile) return matchedPositions;
+  if (!tile) return [];
 
-    // Horizontal check
-    let left = position.col;
-    while (left >= 0 && board[position.row][left] === tile) {
-      left--;
+  // Horizontal check
+  let left = position.col;
+  while (left >= 0 && board[position.row][left] === tile) {
+    left--;
+  }
+
+  let right = position.col;
+  while (right < board[0].length && board[position.row][right] === tile) {
+    right++;
+  }
+
+  if (right - left - 1 >= 3) {
+    for (let i = left + 1; i < right; i++) {
+      horizontalMatches.push({ row: position.row, col: i });
     }
+  }
 
-    let right = position.col;
-    while (right < board[0].length && board[position.row][right] === tile) {
-      right++;
+  // Vertical check
+  let up = position.row;
+  while (up >= 0 && board[up][position.col] === tile) {
+    up--;
+  }
+
+  let down = position.row;
+  while (down < board.length && board[down][position.col] === tile) {
+    down++;
+  }
+
+  if (down - up - 1 >= 3) {
+    for (let i = up + 1; i < down; i++) {
+      verticalMatches.push({ row: i, col: position.col });
     }
+  }
 
-    if (right - left - 1 >= 3) {
-      for (let i = left + 1; i < right; i++) {
-        matchedPositions.push({ row: position.row, col: i });
-      }
-    }
+  // Check for overlap
+  const overlap = horizontalMatches.some(hPos => 
+    verticalMatches.some(vPos => hPos.row === vPos.row && hPos.col === vPos.col)
+  );
 
-    // Vertical check
-    let up = position.row;
-    while (up >= 0 && board[up][position.col] === tile) {
-      up--;
-    }
-
-    let down = position.row;
-    while (down < board.length && board[down][position.col] === tile) {
-      down++;
-    }
-
-    if (down - up - 1 >= 3) {
-      for (let i = up + 1; i < down; i++) {
-        matchedPositions.push({ row: i, col: position.col });
-      }
-    }
-
-    return matchedPositions;
+  if (overlap) {
+    // Prioritize horizontal matches over vertical matches
+    return horizontalMatches;
+  } else {
+    return [...horizontalMatches, ...verticalMatches];
+  }
 }
 
 function swapTiles<T>(board: Board<T>, first: Position, second: Position): Board<T> {

@@ -208,7 +208,7 @@ describe("Board", () => {
                 generator.prepare('J', 'K', 'L')
                 console.table(board.tiles)
                 const moved = Board.move(generator, board, {row: 3, col: 4}, {row: 3, col: 0})
-                console.table(board.tiles)
+                console.table(moved.board.tiles)
                 expect(moved.effects).toContainEqual(
                     {kind: 'Match', match: {matched: 'D', positions: [{row: 3, col: 0}, {row: 3, col: 1}, {row: 3, col: 2}]}}
                 )
