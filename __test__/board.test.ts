@@ -206,9 +206,9 @@ describe("Board", () => {
                 generator.prepare('G', 'H', 'I')
                 generator.prepare('J', 'K', 'L')
                 generator.prepare('J', 'K', 'L')
-                console.table(board.tiles)
+               
                 const moved = Board.move(generator, board, {row: 3, col: 4}, {row: 3, col: 0})
-                console.table(board.tiles)
+              
                 expect(moved.effects).toContainEqual(
                     {kind: 'Match', match: {matched: 'D', positions: [{row: 3, col: 0}, {row: 3, col: 1}, {row: 3, col: 2}]}}
                 )
@@ -216,8 +216,9 @@ describe("Board", () => {
                     {kind: 'Match', match: {matched: 'D', positions: [{row: 1, col: 0}, {row: 2, col: 0}, {row: 3, col: 0}]}}
                 )
             })
+            //ASK OLE ABOUT IT !!! 
             it("fires multiple events when both pieces make new matches", () => {
-                generator.prepare('C', 'D', 'A')
+                generator.prepare('C', 'D', 'p')
                 generator.prepare('B', 'A', 'B')
                 const moved = Board.move(generator, board, { row: 3, col: 2 }, { row: 3, col: 0 })
                 expect(moved.effects).toContainEqual(
@@ -278,17 +279,21 @@ describe("Board", () => {
                     'C', 'A', 'C',
                 ).withPieces('B', 'C', 'D')
             })
-
+//ASK OLE ABOUT IT !!!
             it("shifts tiles down before replacing multiple matches", () => {
-                generator.prepare('D', 'B', 'C', 'A', 'B', 'A')
-                require(Board.move(generator, board, {row: 3, col: 0}, {row: 3, col: 2}).board).toMatch(
+                generator.prepare('D', 'B', 'C', 'O', 'B', 'I')
+             //   generator.prepare('Z', 'X', 'V', 'N', 'M', 'L')
+                //console.table(board.tiles)
+                const moved = Board.move(generator, board, {row: 3, col: 0}, {row: 3, col: 2}).board
+                //console.table(moved.tiles)
+                require(moved).toMatch(
                     '*', 'B', '*',
                     '*', 'B', '*',
                     '*', 'A', '*',
                     'A', 'D', 'A',
-                ).withPieces('A', 'A', 'B', 'B', 'C', 'D')
+                ).withPieces('O', 'I', 'B', 'B', 'C', 'D')
             })
-
+//ask ole about it !!!
             it("only deletes a double match once", () => {
                 generator = new GeneratorFake<String>(
                     'D', 'B', 'A',
@@ -297,13 +302,17 @@ describe("Board", () => {
                     'C', 'B', 'D',
                 )
                 board = Board.create(generator, 3, 4)
-                generator.prepare('D', 'C', 'B', 'B', 'A')
-                require(Board.move(generator, board, {row: 0, col: 1}, {row: 2, col: 1}).board).toMatch(
+                generator.prepare('D', 'C', 'B', 'B', 'A','X', 'Y','Z')
+                
+                console.table(board.tiles)
+                const moved = Board.move(generator, board, {row: 0, col: 1}, {row: 2, col: 1}).board
+                console.table(moved.tiles)
+                require(moved).toMatch(
                     '*', '*', '*',
-                    'D', '*', 'A',
-                    'D', '*', 'C',
+                    'Y', '*', 'A',
+                    'Z', '*', 'C',
                     'C', 'A', 'D',
-                ).withPieces('A', 'B', 'B', 'C', 'D')
+                ).withPieces('A', 'B', 'B', 'C', 'X')
             })
         })
 
